@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>PriceMatch — анонимное согласование цены</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ============ СТРАНИЦА 1: ЛЕНДИНГ ============ -->
+    <section id="screen-landing" class="screen active">
+      <div class="container">
+        <header class="hero">
+          <div class="logo"><span class="logo-dot"></span>PRICEMATCH</div>
+          <h1>Согласуй цену <span class="accent">анонимно</span></h1>
+          <p class="subtitle">
+            Как это работает: вы создаёте сессию и отправляете код второй стороне.
+            Каждый участник конфиденциально указывает свой ценовой диапазон.
+            Система автоматически находит пересечение и определяет справедливую цену.
+          </p>
+        </header>
+
+        <!-- Баннер активной сессии (появляется, если сессия уже создана) -->
+        <div id="resume-banner" class="card resume-card" style="display:none;">
+          <div>
+            <div class="resume-title">У вас есть активная сессия</div>
+            <div class="resume-code" id="resume-code"></div>
+          </div>
+          <button id="btn-resume" class="btn btn-ghost btn-sm">Открыть</button>
+        </div>
+
+        <div class="role-picker">
+          <h2>Я участвую как:</h2>
+          <div class="role-cards">
+            <button class="role-card" data-role="seller">
+              <div class="role-icon">💼</div>
+              <div class="role-name">Продавец</div>
+              <div class="role-desc">Предлагаю товар или услугу</div>
+            </button>
+            <button class="role-card" data-role="buyer">
+              <div class="role-icon">🛒</div>
+              <div class="role-name">Покупатель</div>
+              <div class="role-desc">Хочу приобрести</div>
+            </button>
+          </div>
+        </div>
+
+        <button id="btn-continue" class="btn btn-primary btn-lg">
+          Продолжить <span class="arrow">→</span>
+        </button>
+
+        <div class="join-block">
+          <label class="join-label" for="join-code-input">Уже есть код сессии?</label>
+          <div class="join-row">
+            <input
+              type="text"
+              id="join-code-input"
+              class="join-input"
+              placeholder="Введите 6 цифр"
+              maxlength="6"
+              inputmode="numeric"
+            />
+            <button id="btn-join" class="btn btn-primary btn-join">Войти</button>
+          </div>
+        </div>
+
+        <footer class="hint">
+          Данные хранятся локально в вашем браузере и удаляются через 30 дней
+        </footer>
+      </div>
+    </section>
+
+    <!-- ============ СТРАНИЦА 2: ДИАПАЗОН СОЗДАТЕЛЯ ============ -->
+    <section id="screen-creator-range" class="screen">
+      <div class="container">
+        <header class="hero">
+          <h2>Ваш диапазон цены</h2>
+          <p class="subtitle">Укажите диапазон, который вас устраивает</p>
+        </header>
+
+        <div class="currency-block">
+          <label class="input-label">Валюта</label>
+          <div class="currency-row">
+            <button class="currency-btn selected" data-currency="RUB">₽ RUB</button>
+            <button class="currency-btn" data-currency="USD">$ USD</button>
+            <button class="currency-btn" data-currency="EUR">€ EUR</button>
+          </div>
+        </div>
+
+        <div class="card range-card">
+          <label class="input-label">Мой диапазон цен</label>
+          <div class="range-row">
+            <div class="input-wrap">
+              <span class="input-prefix">От</span>
+              <input type="number" id="creator-min" placeholder="0" min="0" />
+            </div>
+            <div class="range-separator">—</div>
+            <div class="input-wrap">
+              <span class="input-prefix">До</span>
+              <input type="number" id="creator-max" placeholder="999999" min="0" />
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="btn-create" class="btn btn-primary btn-lg">Создать сессию</button>
+          <button class="btn btn-ghost btn-lg" data-back="landing">← Назад</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ СТРАНИЦА 3: КОД СЕССИИ ============ -->
+    <section id="screen-creator-code" class="screen">
+      <div class="container">
+        <header class="hero">
+          <h2>Отправьте код сессии партнеру по сделке</h2>
+        </header>
+
+        <div class="card summary-card">
+          <label class="input-label">Мой диапазон цен</label>
+          <div class="summary-range">
+            <div class="summary-cell"><span>От</span><strong id="summary-min"></strong></div>
+            <div class="summary-sep">—</div>
+            <div class="summary-cell"><span>До</span><strong id="summary-max"></strong></div>
+          </div>
+        </div>
+
+        <div class="card code-display-card">
+          <div class="code-label">Ваш код сессии</div>
+          <div class="code-display" id="creator-session-code">------</div>
+          <button id="btn-copy" class="btn btn-ghost btn-sm">📋 Копировать</button>
+        </div>
+
+        <div class="card result-input-card">
+          <h3>Партнёр рассчитал цену?</h3>
+          <p class="muted">Введите 6-значный код результата, чтобы увидеть согласованную цену</p>
+          <input
+            type="text"
+            id="result-code-input"
+            class="code-input"
+            placeholder="000000"
+            maxlength="6"
+            inputmode="numeric"
+          />
+          <button id="btn-check-result" class="btn btn-primary">Показать итоговую цену</button>
+        </div>
+
+        <button id="btn-creator-cancel" class="btn btn-ghost">Начать заново</button>
+      </div>
+    </section>
+
+    <!-- ============ ПАРТНЁР: ДИАПАЗОН ============ -->
+    <section id="screen-partner-range" class="screen">
+      <div class="container">
+        <header class="hero">
+          <h2>Ваш диапазон цены</h2>
+          <p class="subtitle">Вы участвуете как: <strong id="partner-role-label"></strong></p>
+        </header>
+
+        <div class="currency-block">
+          <label class="input-label">Валюта сделки</label>
+          <div class="currency-chip" id="partner-currency">₽ RUB</div>
+        </div>
+
+        <div class="card range-card">
+          <label class="input-label">Мой диапазон цен</label>
+          <div class="range-row">
+            <div class="input-wrap">
+              <span class="input-prefix">От</span>
+              <input type="number" id="partner-min" placeholder="0" min="0" />
+            </div>
+            <div class="range-separator">—</div>
+            <div class="input-wrap">
+              <span class="input-prefix">До</span>
+              <input type="number" id="partner-max" placeholder="999999" min="0" />
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="btn-calculate" class="btn btn-primary btn-lg">Рассчитать цену</button>
+          <button class="btn btn-ghost btn-lg" data-back="landing">← Назад</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ РЕЗУЛЬТАТ ============ -->
+    <section id="screen-result" class="screen">
+      <div class="container">
+        <div id="result-success" class="result-state">
+          <header class="hero">
+            <div class="status-badge success">✓ Сделка состоялась</div>
+            <h2>Согласованная цена:</h2>
+          </header>
+
+          <div class="card success-card">
+            <div class="big-price" id="result-price">0</div>
+            <div class="intersect-info" id="result-intersect"></div>
+          </div>
+
+          <div id="result-code-block" class="card code-display-card">
+            <div class="code-label">Код результата</div>
+            <p class="muted">Отправьте этот код партнёру, чтобы он тоже увидел цену</p>
+            <div class="code-display" id="result-code">------</div>
+            <button id="btn-copy-result" class="btn btn-ghost btn-sm">📋 Копировать</button>
+          </div>
+
+          <button id="btn-result-reset" class="btn btn-ghost">Начать заново</button>
+        </div>
+
+        <div id="result-fail" class="result-state" style="display:none;">
+          <header class="hero">
+            <div class="status-badge fail">✕ Сделка не состоялась</div>
+            <h2>Диапазоны не пересекаются</h2>
+            <p class="subtitle">Попробуйте расширить границы и найти компромисс</p>
+          </header>
+
+          <div class="card fail-card">
+            <div class="fail-ranges" id="fail-ranges-info"></div>
+          </div>
+
+          <div class="actions">
+            <button id="btn-retry" class="btn btn-primary">Изменить диапазон</button>
+            <button id="btn-result-reset-fail" class="btn btn-ghost">Начать заново</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
