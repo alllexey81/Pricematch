@@ -6,7 +6,7 @@
 // 🔴 ВСТАВЬ СВОИ ЗНАЧЕНИЯ
 const GH_OWNER = 'alllexey81';
 const GH_REPO  = 'pricematch-db';
-const GH_TOKEN = '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';
+const GH_TOKEN = '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';
 
 const MY_SESSION_KEY = 'pm_my_session';
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 дней
