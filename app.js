@@ -1,10 +1,12 @@
 /* =======================================================
-   PriceMatch v3 — общая база через Firebase Realtime DB (REST)
-   Работает с GitHub Pages, без собственного сервера
+   PriceMatch v4 — база данных = приватный репозиторий GitHub
+   Без сторонних сервисов: только GitHub API (стабилен в РФ)
    ======================================================= */
 
-// 🔴 ВСТАВЬ СЮДА свой URL из вкладки Data консоли Firebase
-const DB_URL = 'https://pricematch.alllexey.workers.dev';
+// 🔴 ВСТАВЬ СВОИ ЗНАЧЕНИЯ
+const GH_OWNER = 'alllexey81';
+const GH_REPO  = 'pricematch-db';
+const GH_TOKEN = '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';
 
 const MY_SESSION_KEY = 'pm_my_session';
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 дней
@@ -46,28 +48,71 @@ function toast(msg, type = '') {
   setTimeout(() => (el.className = 'toast'), 2600);
 }
 
-/* -------------------- БАЗА ДАННЫХ (Firebase REST) -------------------- */
+/* -------------------- БАЗА: GitHub REST API -------------------- */
+const GH_API = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents`;
+
+function ghHeaders() {
+  return {
+    'Authorization': `Bearer ${GH_TOKEN}`,
+    'Accept': 'application/vnd.github+json',
+  };
+}
+
+function b64encodeUtf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return btoa(bin);
+}
+
+function b64decodeUtf8(b64) {
+  const bin = atob(b64.replace(/\s/g, ''));
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
 function isExpired(d) {
   return d && d.createdAt && (Date.now() - d.createdAt > TTL_MS);
 }
 
 async function dbGet(path) {
-  const r = await fetch(DB_URL + path + '.json');
-  if (!r.ok) throw new Error('DB GET ' + r.status);
-  return await r.json(); // null, если записи нет
+  const r = await fetch(`${GH_API}${path}.json`, { headers: ghHeaders() });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('GET ' + r.status);
+  const meta = await r.json();
+  return JSON.parse(b64decodeUtf8(meta.content));
 }
 
 async function dbPut(path, data) {
-  const r = await fetch(DB_URL + path + '.json', {
+  const body = {
+    message: 'pricematch: ' + path,
+    content: b64encodeUtf8(JSON.stringify(data)),
+  };
+  // если файл уже есть — нужен его sha для обновления
+  const cur = await fetch(`${GH_API}${path}.json`, { headers: ghHeaders() });
+  if (cur.ok) body.sha = (await cur.json()).sha;
+
+  const r = await fetch(`${GH_API}${path}.json`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    headers: { ...ghHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error('DB PUT ' + r.status);
+  if (!r.ok) throw new Error('PUT ' + r.status);
 }
 
 function dbDelete(path) {
-  fetch(DB_URL + path + '.json', { method: 'DELETE' }).catch(() => {});
+  (async () => {
+    try {
+      const cur = await fetch(`${GH_API}${path}.json`, { headers: ghHeaders() });
+      if (!cur.ok) return;
+      const sha = (await cur.json()).sha;
+      await fetch(`${GH_API}${path}.json`, {
+        method: 'DELETE',
+        headers: { ...ghHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'pricematch: delete ' + path, sha }),
+      });
+    } catch (e) { /* тихое удаление */ }
+  })();
 }
 
 async function saveSession(code, data) { await dbPut('/sessions/' + code, data); }
@@ -95,7 +140,7 @@ async function generateUniqueCode() {
   return String(Date.now()).slice(-6);
 }
 
-/* -------------------- АЛГОРИТМ ЦЕНЫ (из v2.1) -------------------- */
+/* -------------------- АЛГОРИТМ ЦЕНЫ -------------------- */
 function computeCompromisePrice(lo, hi) {
   const width = hi - lo;
   const STEPS = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
@@ -181,7 +226,7 @@ $('#btn-join').addEventListener('click', async () => {
   try {
     await joinByCode($('#join-code-input').value.trim());
   } catch (e) {
-    toast('Нет соединения с базой. Попробуйте ещё раз', 'error');
+    toast('Не удалось связаться с базой. Попробуйте ещё раз', 'error');
   } finally {
     setLoading(btn, false);
   }
@@ -192,7 +237,6 @@ async function joinByCode(code) {
   const session = await loadSession(code);
   if (!session) { toast('Сессия не найдена', 'error'); return; }
 
-  // Защита: создатель вводит свой же код — открываем его экран
   if (code === localStorage.getItem(MY_SESSION_KEY)) {
     openCreatorCode(session);
     toast('Это ваша сессия', 'success');
@@ -248,7 +292,7 @@ $('#btn-create').addEventListener('click', async () => {
     localStorage.setItem(MY_SESSION_KEY, code);
     openCreatorCode(session);
   } catch (e) {
-    toast('Нет соединения с базой. Попробуйте ещё раз', 'error');
+    toast('Не удалось связаться с базой. Попробуйте ещё раз', 'error');
   } finally {
     setLoading(btn, false);
   }
@@ -281,7 +325,7 @@ $('#btn-check-result').addEventListener('click', async () => {
     state.resultCode = code;
     showFinalResult(result);
   } catch (e) {
-    toast('Нет соединения с базой. Попробуйте ещё раз', 'error');
+    toast('Не удалось связаться с базой. Попробуйте ещё раз', 'error');
   } finally {
     setLoading(btn, false);
   }
@@ -343,7 +387,7 @@ $('#btn-calculate').addEventListener('click', async () => {
     state.resultCode = resultCode;
     showFinalResult(resultData);
   } catch (e) {
-    toast('Нет соединения с базой. Попробуйте ещё раз', 'error');
+    toast('Не удалось связаться с базой. Попробуйте ещё раз', 'error');
   } finally {
     setLoading(btn, false);
   }
@@ -425,7 +469,6 @@ function copyText(text, okMsg) {
 
 function refreshResumeBanner() {
   const myCode = localStorage.getItem(MY_SESSION_KEY);
-  const session = myCode ? loadSessionLocal(myCode) : null;
   const banner = $('#resume-banner');
   if (myCode) {
     banner.style.display = 'flex';
@@ -434,9 +477,6 @@ function refreshResumeBanner() {
     banner.style.display = 'none';
   }
 }
-// Локальная заглушка: баннер показываем по локальному указателю,
-// а живые данные подтянутся при открытии
-function loadSessionLocal(code) { return code; }
 
 $('#btn-resume').addEventListener('click', async () => {
   const myCode = localStorage.getItem(MY_SESSION_KEY);
@@ -454,7 +494,7 @@ $('#btn-resume').addEventListener('click', async () => {
     }
     openCreatorCode(session);
   } catch (e) {
-    toast('Нет соединения с базой', 'error');
+    toast('Не удалось связаться с базой', 'error');
   }
 });
 
@@ -468,6 +508,6 @@ attachDigits($('#result-code-input'));
 refreshResumeBanner();
 showScreen('landing');
 
-if (DB_URL.includes('YOUR-PROJECT')) {
-  setTimeout(() => toast('⚙️ Вставьте URL базы Firebase в app.js (строка DB_URL)', 'error'), 600);
+if (GH_TOKEN.includes('ВСТАВЬ')) {
+  setTimeout(() => toast('⚙️ Вставьте токен GitHub в app.js (строка GH_TOKEN)', 'error'), 600);
 }
