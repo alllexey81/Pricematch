@@ -4,7 +4,7 @@
    ======================================================= */
 
 // 🔴 ВСТАВЬ СЮДА свой URL из вкладки Data консоли Firebase
-const DB_URL = 'https://pricematch-dc8ff-default-rtdb.europe-west1.firebasedatabase.app/';
+const DB_URL = 'https://pricematch-dc8ff-default-rtdb.europe-west1.firebasedatabase.app';
 
 const MY_SESSION_KEY = 'pm_my_session';
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 дней
