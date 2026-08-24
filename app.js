@@ -1,9 +1,11 @@
 /* =======================================================
-   PriceMatch v2.1 — SPA на чистом JS + localStorage
+   PriceMatch v3 — общая база через Firebase Realtime DB (REST)
+   Работает с GitHub Pages, без собственного сервера
    ======================================================= */
 
-const STORAGE_PREFIX = 'pm_session_';
-const STORAGE_RESULT = 'pm_result_';
+// 🔴 ВСТАВЬ СЮДА свой URL из вкладки Data консоли Firebase
+const DB_URL = 'https://pricematch-dc8ff-default-rtdb.europe-west1.firebasedatabase.app/';
+
 const MY_SESSION_KEY = 'pm_my_session';
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 дней
 
@@ -44,86 +46,79 @@ function toast(msg, type = '') {
   setTimeout(() => (el.className = 'toast'), 2600);
 }
 
-/* -------------------- STORAGE -------------------- */
-function saveSession(code, data) {
-  localStorage.setItem(STORAGE_PREFIX + code, JSON.stringify(data));
-}
-function loadSession(code) {
-  try {
-    const raw = localStorage.getItem(STORAGE_PREFIX + code);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-function saveResult(code, data) {
-  localStorage.setItem(STORAGE_RESULT + code, JSON.stringify(data));
-}
-function loadResult(code) {
-  try {
-    const raw = localStorage.getItem(STORAGE_RESULT + code);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-function cleanupOldSessions() {
-  const now = Date.now();
-  for (let i = localStorage.length - 1; i >= 0; i--) {
-    const key = localStorage.key(i);
-    if (!key) continue;
-    if (key.startsWith(STORAGE_PREFIX) || key.startsWith(STORAGE_RESULT)) {
-      try {
-        const data = JSON.parse(localStorage.getItem(key));
-        if (data && data.createdAt && now - data.createdAt > TTL_MS) {
-          localStorage.removeItem(key);
-        }
-      } catch { localStorage.removeItem(key); }
-    }
-  }
+/* -------------------- БАЗА ДАННЫХ (Firebase REST) -------------------- */
+function isExpired(d) {
+  return d && d.createdAt && (Date.now() - d.createdAt > TTL_MS);
 }
 
-/* -------------------- UTIL -------------------- */
-function generateUniqueCode() {
+async function dbGet(path) {
+  const r = await fetch(DB_URL + path + '.json');
+  if (!r.ok) throw new Error('DB GET ' + r.status);
+  return await r.json(); // null, если записи нет
+}
+
+async function dbPut(path, data) {
+  const r = await fetch(DB_URL + path + '.json', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!r.ok) throw new Error('DB PUT ' + r.status);
+}
+
+function dbDelete(path) {
+  fetch(DB_URL + path + '.json', { method: 'DELETE' }).catch(() => {});
+}
+
+async function saveSession(code, data) { await dbPut('/sessions/' + code, data); }
+async function loadSession(code) {
+  const d = await dbGet('/sessions/' + code);
+  if (isExpired(d)) { dbDelete('/sessions/' + code); return null; }
+  return d || null;
+}
+async function saveResult(code, data) { await dbPut('/results/' + code, data); }
+async function loadResult(code) {
+  const d = await dbGet('/results/' + code);
+  if (isExpired(d)) { dbDelete('/results/' + code); return null; }
+  return d || null;
+}
+
+async function generateUniqueCode() {
   for (let i = 0; i < 50; i++) {
     const code = String(Math.floor(100000 + Math.random() * 900000));
-    if (!loadSession(code) && !loadResult(code)) return code;
+    const [s, r] = await Promise.all([
+      dbGet('/sessions/' + code),
+      dbGet('/results/' + code),
+    ]);
+    if (!s && !r) return code;
   }
   return String(Date.now()).slice(-6);
 }
 
-/* =========================================================
-   КОМПРОМИССНАЯ ЦЕНА (исправленный алгоритм)
-   - строго ВНУТРИ пересечения (никогда на границах);
-   - «красивый» шаг зависит от ширины диапазона;
-   - точная середина исключена (непредсказуемость);
-   - равновероятный случайный выбор из всех кандидатов.
-   ========================================================= */
+/* -------------------- АЛГОРИТМ ЦЕНЫ (из v2.1) -------------------- */
 function computeCompromisePrice(lo, hi) {
   const width = hi - lo;
   const STEPS = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
 
-  // «Красивый» шаг: крупнейший, при котором внутри диапазона
-  // остаётся минимум ~6 интервалов (достаточно кандидатов)
   let step = 1;
   for (const s of STEPS) {
     if (width >= s * 6) { step = s; break; }
   }
 
-  // Кандидаты — кратные шагу значения СТРОГО между lo и hi
   let candidates = [];
   for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
     if (v > lo && v < hi) candidates.push(v);
   }
 
-  // Если шаг оказался слишком грубым — переходим на единицы
   if (candidates.length < 3 && step > 1) {
     candidates = [];
     for (let v = lo + 1; v < hi; v++) candidates.push(v);
   }
 
-  // Вырожденный диапазон (ширина < 2) — берём округлённую середину
   if (candidates.length === 0) {
     return Math.round((lo + hi) / 2);
   }
 
-  // Исключаем точную середину — цена не должна быть предсказуемой
   const mid = (lo + hi) / 2;
   const filtered = candidates.filter((v) => v !== mid);
   const pool = filtered.length ? filtered : candidates;
@@ -131,6 +126,7 @@ function computeCompromisePrice(lo, hi) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+/* -------------------- UTIL -------------------- */
 function formatPrice(n, cur = 'RUB') {
   const symbol = (CURRENCIES[cur] || CURRENCIES.RUB).symbol;
   return new Intl.NumberFormat('ru-RU').format(n) + ' ' + symbol;
@@ -146,6 +142,20 @@ function attachDigits(el) {
   el.addEventListener('input', () => {
     el.value = el.value.replace(/\D/g, '').slice(0, 6);
   });
+}
+
+function setLoading(btn, on) {
+  if (!btn) return;
+  if (on) {
+    btn.dataset.oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
+    btn.innerHTML = '⏳ Секунду…';
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    if (btn.dataset.oldHtml) btn.innerHTML = btn.dataset.oldHtml;
+  }
 }
 
 /* ================= СТРАНИЦА 1 ================= */
@@ -165,16 +175,24 @@ $('#btn-continue').addEventListener('click', () => {
   showScreen('creator-range');
 });
 
-$('#btn-join').addEventListener('click', () => {
-  joinByCode($('#join-code-input').value.trim());
+$('#btn-join').addEventListener('click', async () => {
+  const btn = $('#btn-join');
+  setLoading(btn, true);
+  try {
+    await joinByCode($('#join-code-input').value.trim());
+  } catch (e) {
+    toast('Нет соединения с базой. Попробуйте ещё раз', 'error');
+  } finally {
+    setLoading(btn, false);
+  }
 });
 
-function joinByCode(code) {
+async function joinByCode(code) {
   if (!/^\d{6}$/.test(code)) { toast('Введите 6 цифр', 'error'); return; }
-  const session = loadSession(code);
+  const session = await loadSession(code);
   if (!session) { toast('Сессия не найдена', 'error'); return; }
 
-  // Защита: создатель вводит свой же код — открываем его экран кода
+  // Защита: создатель вводит свой же код — открываем его экран
   if (code === localStorage.getItem(MY_SESSION_KEY)) {
     openCreatorCode(session);
     toast('Это ваша сессия', 'success');
@@ -205,28 +223,35 @@ document.querySelectorAll('.currency-btn').forEach((btn) => {
   });
 });
 
-$('#btn-create').addEventListener('click', () => {
+$('#btn-create').addEventListener('click', async () => {
   const min = readInt('#creator-min');
   const max = readInt('#creator-max');
   if (min === null || max === null) { toast('Укажите обе границы диапазона', 'error'); return; }
   if (min < 0 || max < 0) { toast('Цена не может быть отрицательной', 'error'); return; }
   if (min >= max) { toast('«От» должно быть меньше «До»', 'error'); return; }
 
-  const code = generateUniqueCode();
-  const session = {
-    code,
-    role: state.selectedRole,
-    min,
-    max,
-    currency: state.currency,
-    createdAt: Date.now(),
-    status: 'waiting',
-    resultCode: null,
-  };
-  saveSession(code, session);
-  localStorage.setItem(MY_SESSION_KEY, code);
-
-  openCreatorCode(session);
+  const btn = $('#btn-create');
+  setLoading(btn, true);
+  try {
+    const code = await generateUniqueCode();
+    const session = {
+      code,
+      role: state.selectedRole,
+      min,
+      max,
+      currency: state.currency,
+      createdAt: Date.now(),
+      status: 'waiting',
+      resultCode: null,
+    };
+    await saveSession(code, session);
+    localStorage.setItem(MY_SESSION_KEY, code);
+    openCreatorCode(session);
+  } catch (e) {
+    toast('Нет соединения с базой. Попробуйте ещё раз', 'error');
+  } finally {
+    setLoading(btn, false);
+  }
 });
 
 /* ================= СТРАНИЦА 3 ================= */
@@ -245,25 +270,31 @@ $('#btn-copy').addEventListener('click', () => {
   copyText($('#creator-session-code').textContent, 'Код сессии скопирован');
 });
 
-$('#btn-check-result').addEventListener('click', () => {
-  const code = $('#result-code-input').value.trim();
-  if (!/^\d{6}$/.test(code)) { toast('Введите 6-значный код', 'error'); return; }
-  const result = loadResult(code);
-  if (!result) { toast('Код не найден или срок истёк', 'error'); return; }
-  state.resultCode = code;
-  showFinalResult(result);
+$('#btn-check-result').addEventListener('click', async () => {
+  const btn = $('#btn-check-result');
+  setLoading(btn, true);
+  try {
+    const code = $('#result-code-input').value.trim();
+    if (!/^\d{6}$/.test(code)) { toast('Введите 6-значный код', 'error'); return; }
+    const result = await loadResult(code);
+    if (!result) { toast('Код не найден или срок истёк', 'error'); return; }
+    state.resultCode = code;
+    showFinalResult(result);
+  } catch (e) {
+    toast('Нет соединения с базой. Попробуйте ещё раз', 'error');
+  } finally {
+    setLoading(btn, false);
+  }
 });
 
 $('#btn-creator-cancel').addEventListener('click', () => {
-  if (state.currentSessionCode) {
-    localStorage.removeItem(STORAGE_PREFIX + state.currentSessionCode);
-  }
+  if (state.currentSessionCode) dbDelete('/sessions/' + state.currentSessionCode);
   localStorage.removeItem(MY_SESSION_KEY);
   resetAll();
 });
 
 /* ================= ПАРТНЁР: РАСЧЁТ ================= */
-$('#btn-calculate').addEventListener('click', () => {
+$('#btn-calculate').addEventListener('click', async () => {
   const session = state.currentSession;
   if (!session) { toast('Сессия не найдена', 'error'); return; }
 
@@ -273,44 +304,49 @@ $('#btn-calculate').addEventListener('click', () => {
   if (pMin < 0 || pMax < 0) { toast('Цена не может быть отрицательной', 'error'); return; }
   if (pMin >= pMax) { toast('«От» должно быть меньше «До»', 'error'); return; }
 
-  const uMin = session.min, uMax = session.max;
-  const lo = Math.max(pMin, uMin);
-  const hi = Math.min(pMax, uMax);
+  const btn = $('#btn-calculate');
+  setLoading(btn, true);
+  try {
+    const uMin = session.min, uMax = session.max;
+    const lo = Math.max(pMin, uMin);
+    const hi = Math.min(pMax, uMax);
 
-  const resultCode = generateUniqueCode();
-  let resultData;
+    const resultCode = await generateUniqueCode();
+    let resultData;
 
-  if (lo > hi) {
-    // Не пересеклись
-    resultData = {
-      deal: false,
-      currency: session.currency,
-      userRange: [uMin, uMax],
-      partnerRange: [pMin, pMax],
-      createdAt: Date.now(),
-      sessionCode: state.currentSessionCode,
-    };
-  } else {
-    // НОВАЯ логика: случайная цена строго внутри пересечения
-    const price = computeCompromisePrice(lo, hi);
+    if (lo > hi) {
+      resultData = {
+        deal: false,
+        currency: session.currency,
+        userRange: [uMin, uMax],
+        partnerRange: [pMin, pMax],
+        createdAt: Date.now(),
+        sessionCode: state.currentSessionCode,
+      };
+    } else {
+      const price = computeCompromisePrice(lo, hi);
+      resultData = {
+        deal: true,
+        currency: session.currency,
+        price,
+        intersectMin: lo,
+        intersectMax: hi,
+        createdAt: Date.now(),
+        sessionCode: state.currentSessionCode,
+      };
+      session.status = 'completed';
+      session.resultCode = resultCode;
+      await saveSession(state.currentSessionCode, session);
+    }
 
-    resultData = {
-      deal: true,
-      currency: session.currency,
-      price,
-      intersectMin: lo,
-      intersectMax: hi,
-      createdAt: Date.now(),
-      sessionCode: state.currentSessionCode,
-    };
-    session.status = 'completed';
-    session.resultCode = resultCode;
-    saveSession(state.currentSessionCode, session);
+    await saveResult(resultCode, resultData);
+    state.resultCode = resultCode;
+    showFinalResult(resultData);
+  } catch (e) {
+    toast('Нет соединения с базой. Попробуйте ещё раз', 'error');
+  } finally {
+    setLoading(btn, false);
   }
-
-  saveResult(resultCode, resultData);
-  state.resultCode = resultCode;
-  showFinalResult(resultData);
 });
 
 /* ================= РЕЗУЛЬТАТ ================= */
@@ -347,11 +383,8 @@ $('#btn-copy-result').addEventListener('click', () => {
 });
 
 $('#btn-retry').addEventListener('click', () => {
-  if (state.currentSession) {
-    showScreen('partner-range');
-  } else {
-    resetAll();
-  }
+  if (state.currentSession) showScreen('partner-range');
+  else resetAll();
 });
 
 $('#btn-result-reset').addEventListener('click', () => {
@@ -392,30 +425,37 @@ function copyText(text, okMsg) {
 
 function refreshResumeBanner() {
   const myCode = localStorage.getItem(MY_SESSION_KEY);
-  const session = myCode ? loadSession(myCode) : null;
+  const session = myCode ? loadSessionLocal(myCode) : null;
   const banner = $('#resume-banner');
-  if (session) {
+  if (myCode) {
     banner.style.display = 'flex';
-    $('#resume-code').textContent = 'Код: ' + session.code;
+    $('#resume-code').textContent = 'Код: ' + myCode;
   } else {
     banner.style.display = 'none';
-    if (myCode) localStorage.removeItem(MY_SESSION_KEY);
   }
 }
+// Локальная заглушка: баннер показываем по локальному указателю,
+// а живые данные подтянутся при открытии
+function loadSessionLocal(code) { return code; }
 
-$('#btn-resume').addEventListener('click', () => {
+$('#btn-resume').addEventListener('click', async () => {
   const myCode = localStorage.getItem(MY_SESSION_KEY);
-  const session = myCode ? loadSession(myCode) : null;
-  if (!session) { refreshResumeBanner(); return; }
-  if (session.status === 'completed' && session.resultCode) {
-    const r = loadResult(session.resultCode);
-    if (r) {
-      state.resultCode = session.resultCode;
-      showFinalResult(r);
-      return;
+  if (!myCode) { refreshResumeBanner(); return; }
+  try {
+    const session = await loadSession(myCode);
+    if (!session) { localStorage.removeItem(MY_SESSION_KEY); refreshResumeBanner(); return; }
+    if (session.status === 'completed' && session.resultCode) {
+      const r = await loadResult(session.resultCode);
+      if (r) {
+        state.resultCode = session.resultCode;
+        showFinalResult(r);
+        return;
+      }
     }
+    openCreatorCode(session);
+  } catch (e) {
+    toast('Нет соединения с базой', 'error');
   }
-  openCreatorCode(session);
 });
 
 document.querySelectorAll('[data-back]').forEach((btn) => {
@@ -425,6 +465,9 @@ document.querySelectorAll('[data-back]').forEach((btn) => {
 /* -------------------- INIT -------------------- */
 attachDigits($('#join-code-input'));
 attachDigits($('#result-code-input'));
-cleanupOldSessions();
 refreshResumeBanner();
 showScreen('landing');
+
+if (DB_URL.includes('YOUR-PROJECT')) {
+  setTimeout(() => toast('⚙️ Вставьте URL базы Firebase в app.js (строка DB_URL)', 'error'), 600);
+}
