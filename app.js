@@ -413,10 +413,9 @@ function showFinalResult(data) {
     successBlock.style.display = 'none';
     failBlock.style.display = 'block';
     $('#fail-ranges-info').innerHTML =
-      '<div>Диапазон партнёра: <strong>' + formatPrice(data.userRange[0], cur) +
-      ' — ' + formatPrice(data.userRange[1], cur) + '</strong></div>' +
-      '<div>Ваш диапазон: <strong>' + formatPrice(data.partnerRange[0], cur) +
-      ' — ' + formatPrice(data.partnerRange[1], cur) + '</strong></div>';
+      'Вы не договорились по цене.<br>' +
+      'Диапазоны не пересеклись. Каждый видит только свой диапазон — ' +
+      'измените границы и попробуйте ещё раз.';
   }
   showScreen('result');
 }
