@@ -359,11 +359,10 @@ $('#btn-calculate').addEventListener('click', async () => {
     let resultData;
 
     if (lo > hi) {
+      // Анонимность: чужие диапазоны НЕ сохраняются и НЕ показываются
       resultData = {
         deal: false,
         currency: session.currency,
-        userRange: [uMin, uMax],
-        partnerRange: [pMin, pMax],
         createdAt: Date.now(),
         sessionCode: state.currentSessionCode,
       };
