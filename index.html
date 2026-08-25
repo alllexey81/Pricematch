@@ -167,11 +167,8 @@
           <button id="btn-copy" class="btn btn-ghost btn-sm">📋 Копировать</button>
         </div>
 
-        <div class="card result-input-card">
-          <h3>Партнёр рассчитал цену?</h3>
-          <p class="muted">Введите 6-значный код результата, чтобы увидеть согласованную цену</p>
-          <input type="text" id="result-code-input" class="code-input" placeholder="000000" maxlength="6" inputmode="numeric" />
-          <button id="btn-check-result" class="btn btn-primary">Показать итоговую цену</button>
+        <div class="card">
+          <p class="muted" style="text-align:center;">Когда партнёр рассчитает цену, сделка появится в «Мои сделки» со статусом и итоговой ценой.</p>
         </div>
 
         <button id="btn-creator-cancel" class="btn btn-ghost">Начать заново</button>
@@ -245,11 +242,8 @@
             <div class="intersect-info" id="result-intersect"></div>
           </div>
 
-          <div id="result-code-block" class="card code-display-card">
-            <div class="code-label">Код результата</div>
-            <p class="muted">Отправьте этот код партнёру, чтобы он тоже увидел цену</p>
-            <div class="code-display" id="result-code">------</div>
-            <button id="btn-copy-result" class="btn btn-ghost btn-sm">📋 Копировать</button>
+          <div class="card">
+            <p class="muted" style="text-align:center;">Партнёр тоже видит эту цену. Сделка сохранена в «Мои сделки».</p>
           </div>
 
           <button id="btn-result-reset" class="btn btn-ghost">Начать заново</button>
