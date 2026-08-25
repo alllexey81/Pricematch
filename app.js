@@ -187,7 +187,7 @@ async function sendLoginCode(email, code) {
       service_id: EMAILJS_SERVICE_ID,
       template_id: EMAILJS_TEMPLATE_ID,
       user_id: EMAILJS_PUBLIC_KEY,
-      template_params: { to_email: email, code: code },
+      template_params: { email: email, passcode: code },
     }),
   });
   if (!r.ok) throw new Error('EmailJS ' + r.status);
