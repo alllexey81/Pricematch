@@ -475,3 +475,82 @@ h3 { font-size: 17px; font-weight: 600; margin-bottom: 10px; }
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 input[type=number] { -moz-appearance: textfield; }
+
+/* ============ V5: ВХОД, КАБИНЕТ, ПРЕДМЕТ СДЕЛКИ ============ */
+.text-input {
+  width: 100%;
+  background: var(--bg-1);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-size: 16px;
+  outline: none;
+  margin-bottom: 14px;
+  transition: border-color 0.2s var(--ease);
+}
+.text-input:focus { border-color: var(--indigo); }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.topbar-user {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 50%;
+}
+.topbar-actions { display: flex; gap: 8px; }
+
+.item-text {
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  word-break: break-word;
+}
+
+.deal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+}
+.deal-row:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.deal-main { min-width: 0; }
+.deal-item {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deal-meta { font-size: 12px; color: var(--text-dim); }
+.status-pill {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+.status-pill.wait { background: rgba(99,102,241,.15); color: var(--indigo-soft); border: 1px solid rgba(99,102,241,.35); }
+.status-pill.ok    { background: rgba(16,185,129,.15); color: var(--emerald); border: 1px solid rgba(16,185,129,.3); }
+.status-pill.warn  { background: rgba(244,63,94,.15);  color: var(--rose);    border: 1px solid rgba(244,63,94,.3); }
