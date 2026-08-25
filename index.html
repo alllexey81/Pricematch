@@ -10,20 +10,54 @@
 <body>
   <div class="app">
 
-    <!-- ============ СТРАНИЦА 1: ЛЕНДИНГ ============ -->
-    <section id="screen-landing" class="screen active">
+    <!-- ============ ВХОД ============ -->
+    <section id="screen-login" class="screen">
       <div class="container">
+        <header class="hero">
+          <div class="logo"><span class="logo-dot"></span>PRICEMATCH</div>
+          <h1>Вход в систему</h1>
+          <p class="subtitle">Учётная запись — ваша электронная почта. На неё придёт одноразовый 6-значный код входа.</p>
+        </header>
+
+        <div class="card" id="login-step-email">
+          <label class="input-label" for="login-email">Ваш e-mail</label>
+          <input type="email" id="login-email" class="text-input" placeholder="you@mail.ru" autocomplete="email" />
+          <button id="btn-send-login" class="btn btn-primary btn-lg">Получить код входа</button>
+        </div>
+
+        <div class="card" id="login-step-code" style="display:none;">
+          <p class="muted" style="margin-bottom:14px;">
+            Мы отправили код на <strong id="login-email-echo"></strong>. Введите его:
+          </p>
+          <input type="text" id="login-code" class="code-input" maxlength="6" inputmode="numeric" placeholder="000000" />
+          <div class="actions">
+            <button id="btn-login" class="btn btn-primary btn-lg">Войти</button>
+            <button id="btn-login-back" class="btn btn-ghost btn-sm">Изменить e-mail</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ЛЕНДИНГ (после входа) ============ -->
+    <section id="screen-landing" class="screen">
+      <div class="container">
+        <div class="topbar">
+          <div class="topbar-user" id="topbar-email"></div>
+          <div class="topbar-actions">
+            <button id="btn-dashboard" class="btn btn-ghost btn-sm">Мои сделки</button>
+            <button id="btn-logout" class="btn btn-ghost btn-sm">Выйти</button>
+          </div>
+        </div>
+
         <header class="hero">
           <div class="logo"><span class="logo-dot"></span>PRICEMATCH</div>
           <h1>Согласуй цену <span class="accent">анонимно</span></h1>
           <p class="subtitle">
-            Как это работает: вы создаёте сессию и отправляете код второй стороне.
-            Каждый участник конфиденциально указывает свой ценовой диапазон.
-            Система автоматически находит пересечение и определяет справедливую цену.
+            Создайте сессию и отправьте код второй стороне. Каждый конфиденциально
+            указывает свой диапазон. Система находит пересечение и определяет честную цену.
           </p>
         </header>
 
-        <!-- Баннер активной сессии (появляется, если сессия уже создана) -->
         <div id="resume-banner" class="card resume-card" style="display:none;">
           <div>
             <div class="resume-title">У вас есть активная сессия</div>
@@ -55,31 +89,28 @@
         <div class="join-block">
           <label class="join-label" for="join-code-input">Уже есть код сессии?</label>
           <div class="join-row">
-            <input
-              type="text"
-              id="join-code-input"
-              class="join-input"
-              placeholder="Введите 6 цифр"
-              maxlength="6"
-              inputmode="numeric"
-            />
+            <input type="text" id="join-code-input" class="join-input" placeholder="Введите 6 цифр" maxlength="6" inputmode="numeric" />
             <button id="btn-join" class="btn btn-primary btn-join">Войти</button>
           </div>
         </div>
 
-        <footer class="hint">
-          Данные хранятся локально в вашем браузере и удаляются через 30 дней
-        </footer>
+        <footer class="hint">Данные хранятся в защищённой базе и удаляются через 30 дней</footer>
       </div>
     </section>
 
-    <!-- ============ СТРАНИЦА 2: ДИАПАЗОН СОЗДАТЕЛЯ ============ -->
+    <!-- ============ ДИАПАЗОН СОЗДАТЕЛЯ ============ -->
     <section id="screen-creator-range" class="screen">
       <div class="container">
         <header class="hero">
           <h2>Ваш диапазон цены</h2>
           <p class="subtitle">Укажите диапазон, который вас устраивает</p>
         </header>
+
+        <div class="card">
+          <label class="input-label" for="creator-item">Предмет сделки</label>
+          <input type="text" id="creator-item" class="text-input" maxlength="80"
+                 placeholder="Например: велосипед Stels Navigator, 21 скорость" />
+        </div>
 
         <div class="currency-block">
           <label class="input-label">Валюта</label>
@@ -112,7 +143,7 @@
       </div>
     </section>
 
-    <!-- ============ СТРАНИЦА 3: КОД СЕССИИ ============ -->
+    <!-- ============ КОД СЕССИИ ============ -->
     <section id="screen-creator-code" class="screen">
       <div class="container">
         <header class="hero">
@@ -120,7 +151,9 @@
         </header>
 
         <div class="card summary-card">
-          <label class="input-label">Мой диапазон цен</label>
+          <label class="input-label">Предмет сделки</label>
+          <div class="item-text" id="summary-item"></div>
+          <label class="input-label" style="margin-top:14px;">Мой диапазон цен</label>
           <div class="summary-range">
             <div class="summary-cell"><span>От</span><strong id="summary-min"></strong></div>
             <div class="summary-sep">—</div>
@@ -137,14 +170,7 @@
         <div class="card result-input-card">
           <h3>Партнёр рассчитал цену?</h3>
           <p class="muted">Введите 6-значный код результата, чтобы увидеть согласованную цену</p>
-          <input
-            type="text"
-            id="result-code-input"
-            class="code-input"
-            placeholder="000000"
-            maxlength="6"
-            inputmode="numeric"
-          />
+          <input type="text" id="result-code-input" class="code-input" placeholder="000000" maxlength="6" inputmode="numeric" />
           <button id="btn-check-result" class="btn btn-primary">Показать итоговую цену</button>
         </div>
 
@@ -159,6 +185,11 @@
           <h2>Ваш диапазон цены</h2>
           <p class="subtitle">Вы участвуете как: <strong id="partner-role-label"></strong></p>
         </header>
+
+        <div class="card">
+          <label class="input-label">Предмет сделки</label>
+          <div class="item-text" id="partner-item"></div>
+        </div>
 
         <div class="currency-block">
           <label class="input-label">Валюта сделки</label>
@@ -187,6 +218,18 @@
       </div>
     </section>
 
+    <!-- ============ МОИ СДЕЛКИ ============ -->
+    <section id="screen-dashboard" class="screen">
+      <div class="container">
+        <button class="btn btn-ghost" data-back="landing">← Назад</button>
+        <header class="hero">
+          <h2>Мои сделки</h2>
+          <p class="subtitle">Все ваши сессии и их статусы</p>
+        </header>
+        <div id="dashboard-list"></div>
+      </div>
+    </section>
+
     <!-- ============ РЕЗУЛЬТАТ ============ -->
     <section id="screen-result" class="screen">
       <div class="container">
@@ -197,6 +240,7 @@
           </header>
 
           <div class="card success-card">
+            <div class="item-text" id="result-item" style="margin-bottom:18px;"></div>
             <div class="big-price" id="result-price">0</div>
             <div class="intersect-info" id="result-intersect"></div>
           </div>
@@ -214,11 +258,12 @@
         <div id="result-fail" class="result-state" style="display:none;">
           <header class="hero">
             <div class="status-badge fail">✕ Сделка не состоялась</div>
-            <h2>Диапазоны не пересекаются</h2>
-            <p class="subtitle">Попробуйте расширить границы и найти компромисс</p>
+            <h2>Вы не договорились по цене</h2>
+            <p class="subtitle">Диапазоны не пересеклись. Каждый видит только свой диапазон — измените границы и попробуйте ещё раз.</p>
           </header>
 
           <div class="card fail-card">
+            <div class="item-text" id="result-item-fail" style="margin-bottom:14px;"></div>
             <div class="fail-ranges" id="fail-ranges-info"></div>
           </div>
 
