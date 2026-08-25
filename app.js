@@ -438,29 +438,11 @@ function openCreatorCode(session) {
   $('#summary-min').textContent = formatPrice(session.min, cur);
   $('#summary-max').textContent = formatPrice(session.max, cur);
   $('#creator-session-code').textContent = session.code;
-  $('#result-code-input').value = '';
   showScreen('creator-code');
 }
 
 $('#btn-copy').addEventListener('click', () => {
   copyText($('#creator-session-code').textContent, 'Код сессии скопирован');
-});
-
-$('#btn-check-result').addEventListener('click', async () => {
-  const btn = $('#btn-check-result');
-  setLoading(btn, true);
-  try {
-    const code = $('#result-code-input').value.trim();
-    if (!/^\d{6}$/.test(code)) { toast('Введите 6-значный код', 'error'); return; }
-    const result = await loadResult(code);
-    if (!result) { toast('Код не найден или срок истёк', 'error'); return; }
-    state.resultCode = code;
-    showFinalResult(result);
-  } catch (e) {
-    toast('Не удалось связаться с базой. Попробуйте ещё раз', 'error');
-  } finally {
-    setLoading(btn, false);
-  }
 });
 
 $('#btn-creator-cancel').addEventListener('click', () => {
@@ -634,12 +616,7 @@ function showFinalResult(data) {
     $('#result-intersect').innerHTML =
       'Зона компромисса: <strong>' + formatPrice(data.intersectMin, cur) +
       ' — ' + formatPrice(data.intersectMax, cur) + '</strong>';
-    if (state.resultCode) {
-      $('#result-code').textContent = state.resultCode;
-      $('#result-code-block').style.display = 'block';
-    } else {
-      $('#result-code-block').style.display = 'none';
-    }
+
   } else {
     successBlock.style.display = 'none';
     failBlock.style.display = 'block';
@@ -651,10 +628,6 @@ function showFinalResult(data) {
   }
   showScreen('result');
 }
-
-$('#btn-copy-result').addEventListener('click', () => {
-  copyText($('#result-code').textContent, 'Код результата скопирован');
-});
 
 $('#btn-retry').addEventListener('click', () => {
   if (state.currentSession) {
@@ -685,7 +658,7 @@ function resetAll() {
     b.classList.toggle('selected', b.dataset.currency === 'RUB');
   });
   ['#creator-min', '#creator-max', '#partner-min', '#partner-max',
-   '#join-code-input', '#result-code-input', '#creator-item'].forEach((s) => ($(s).value = ''));
+   '#join-code-input', '#creator-item'].forEach((s) => ($(s).value = ''));
   refreshResumeBanner();
 }
 
@@ -737,7 +710,6 @@ document.querySelectorAll('[data-back]').forEach((btn) => {
 
 /* -------------------- INIT -------------------- */
 attachDigits($('#join-code-input'));
-attachDigits($('#result-code-input'));
 attachDigits($('#login-code'));
 
 if (currentAccount()) {
