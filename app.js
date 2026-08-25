@@ -311,7 +311,6 @@ $('#btn-login').addEventListener('click', async () => {
 function enterApp() {
   const acc = currentAccount();
   $('#topbar-email').textContent = acc.email;
-  refreshResumeBanner();
   showScreen('landing');
 }
 
@@ -659,7 +658,6 @@ function resetAll() {
   });
   ['#creator-min', '#creator-max', '#partner-min', '#partner-max',
    '#join-code-input', '#creator-item'].forEach((s) => ($(s).value = ''));
-  refreshResumeBanner();
 }
 
 /* -------------------- ОБЩЕЕ -------------------- */
@@ -672,37 +670,6 @@ function copyText(text, okMsg) {
     toast('Копирование недоступно: ' + text, 'error');
   }
 }
-
-function refreshResumeBanner() {
-  const myCode = localStorage.getItem(MY_SESSION_KEY);
-  const banner = $('#resume-banner');
-  if (myCode) {
-    banner.style.display = 'flex';
-    $('#resume-code').textContent = 'Код: ' + myCode;
-  } else {
-    banner.style.display = 'none';
-  }
-}
-
-$('#btn-resume').addEventListener('click', async () => {
-  const myCode = localStorage.getItem(MY_SESSION_KEY);
-  if (!myCode) { refreshResumeBanner(); return; }
-  try {
-    const session = await loadSession(myCode);
-    if (!session) { localStorage.removeItem(MY_SESSION_KEY); refreshResumeBanner(); return; }
-    if (session.status === 'completed' && session.resultCode) {
-      const r = await loadResult(session.resultCode);
-      if (r) {
-        state.resultCode = session.resultCode;
-        showFinalResult(r);
-        return;
-      }
-    }
-    openCreatorCode(session);
-  } catch (e) {
-    toast('Не удалось связаться с базой', 'error');
-  }
-});
 
 document.querySelectorAll('[data-back]').forEach((btn) => {
   btn.addEventListener('click', () => showScreen(btn.dataset.back));
