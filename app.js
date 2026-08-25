@@ -9,9 +9,9 @@ const GH_REPO  = 'pricematch-db';
 const GH_TOKEN = '__GH_TOKEN_PLACEHOLDER__';
 
 // 🔴 ВСТАВЬ свои значения из EmailJS
-const EMAILJS_SERVICE_ID  = 'ВСТАВЬ_SERVICE_ID';
-const EMAILJS_TEMPLATE_ID = 'ВСТАВЬ_TEMPLATE_ID';
-const EMAILJS_PUBLIC_KEY  = 'ВСТАВЬ_PUBLIC_KEY';
+const EMAILJS_SERVICE_ID  = 'service_aujtyg8';
+const EMAILJS_TEMPLATE_ID = 'template_0kjakrk';
+const EMAILJS_PUBLIC_KEY  = '6tltV-IsA-1uv4bfZ';
 
 const ACCOUNT_KEY = 'pm_account';
 const MY_SESSION_KEY = 'pm_my_session';
