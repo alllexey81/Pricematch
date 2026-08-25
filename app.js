@@ -658,6 +658,7 @@ function resetAll() {
   });
   ['#creator-min', '#creator-max', '#partner-min', '#partner-max',
    '#join-code-input', '#creator-item'].forEach((s) => ($(s).value = ''));
+  showScreen('landing');
 }
 
 /* -------------------- ОБЩЕЕ -------------------- */
